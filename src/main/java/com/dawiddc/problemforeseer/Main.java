@@ -42,6 +42,19 @@ public class Main {
         dayCount = Integer.valueOf(args[3]);
     }
 
+    private static void findSuspectedPairs() {
+        List<Person> people = createAndFillPeopleList(peopleCount);
+        List<List<Person>> dayList = createAndFillDayList(people);
+
+        for (List<Person> day : dayList) {
+            List<List<Person>> peopleAtTheSameHotelList = createAndFillPeopleAtTheSameHotelList(day);
+            for (List<Person> peopleAtTheSameHotel : peopleAtTheSameHotelList) {
+                List<List<Integer>> pairs = calculatePairs(peopleAtTheSameHotel);
+                insertPairsToPairMap(pairs);
+            }
+        }
+    }
+
     private static List<Person> createAndFillPeopleList(Integer peopleCount) {
         List<Person> people = new ArrayList<>(peopleCount);
 
@@ -52,8 +65,8 @@ public class Main {
         return people;
     }
 
-    private static List<List<Person>> createAndFillDaysPeopleList(List<Person> people) {
-        List<List<Person>> daysPeopleList = new ArrayList<>(dayCount);
+    private static List<List<Person>> createAndFillDayList(List<Person> people) {
+        List<List<Person>> dayList = new ArrayList<>(dayCount);
         Random r = new Random();
 
         for (int i = 0; i < dayCount; i++) {
@@ -61,22 +74,9 @@ public class Main {
                     .filter(person -> Math.random() < nightSpentAtHotelProbability)
                     .collect(Collectors.toList());
             dayWithPeopleGoingToHotel.forEach(person -> person.setHotelId(r.nextInt(hotelCount)));
-            daysPeopleList.add(dayWithPeopleGoingToHotel);
+            dayList.add(dayWithPeopleGoingToHotel);
         }
-        return daysPeopleList;
-    }
-
-    private static void findSuspectedPairs() {
-        List<Person> people = createAndFillPeopleList(peopleCount);
-        List<List<Person>> daysPeopleList = createAndFillDaysPeopleList(people);
-
-        for (List<Person> day : daysPeopleList) {
-            List<List<Person>> peopleAtTheSameHotelList = createAndFillPeopleAtTheSameHotelList(day);
-            for (List<Person> peopleAtTheSameHotel : peopleAtTheSameHotelList) {
-                List<List<Integer>> pairs = calculatePairs(peopleAtTheSameHotel);
-                insertPairsToPairMap(pairs);
-            }
-        }
+        return dayList;
     }
 
     private static List<List<Person>> createAndFillPeopleAtTheSameHotelList(List<Person> day) {
@@ -84,7 +84,7 @@ public class Main {
         for (int i = 0; i < hotelCount; i++) {
             final int hotelId = i;
             List<Person> peopleAtTheSameHotel = day.stream().filter(p -> p.getHotelId() == hotelId).collect(Collectors.toList());
-            if (!peopleAtTheSameHotel.isEmpty()) {
+            if (peopleAtTheSameHotel.size() > 1) {
                 peopleAtTheSameHotelList.add(peopleAtTheSameHotel);
             }
         }
@@ -107,7 +107,6 @@ public class Main {
     }
 
     private static void insertPairsToPairMap(List<List<Integer>> pairs) {
-
         for (List<Integer> pair : pairs) {
             pair.sort(Comparator.comparing(Integer::valueOf));
         }
@@ -122,22 +121,26 @@ public class Main {
     }
 
     private static void printPairMeetCount() {
-        long suspectedPairsCount = 0;
-        for (Integer value : pairMeetCount.values()) {
-            suspectedPairsCount += value;
-        }
+        long suspectedEventsCount = pairMeetCount.values().stream().filter(v -> v > 1).mapToInt(Integer::intValue).sum();
+        System.out.println("\nSuspected events count: " + suspectedEventsCount);
+
+        long suspectedPairsCount = pairMeetCount.values().stream().filter(v -> v > 1).count();
         System.out.println("Suspected pair count: " + suspectedPairsCount);
 
-        System.out.println("\n\nHistogram:\n");
+        System.out.println("\nHistogram:");
         int maxMeetCount = pairMeetCount.values().stream().max(Comparator.comparing(Integer::valueOf)).orElse(0);
         for (int i = 1; i <= maxMeetCount; i++) {
             final int meetCount = i;
             long sum = pairMeetCount.values().stream().filter(value -> value == meetCount).count();
-            System.out.println(i + "=" + sum + "\n");
+            System.out.println(i + "=" + sum);
         }
 
-        Set<Integer> suspectedPeople = new HashSet<>();
-        pairMeetCount.keySet().forEach(suspectedPeople::addAll);
+        final Set<Integer> suspectedPeople = new HashSet<>();
+        pairMeetCount.entrySet().stream()
+                .filter(entry -> entry.getValue() > 1)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList())
+                .forEach(suspectedPeople::addAll);
         System.out.println("\nSuspected people count: " + suspectedPeople.size());
     }
 }
