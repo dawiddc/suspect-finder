@@ -1,0 +1,9 @@
+
+Lsquid:S1481"/Remove this unused "hotelCount" local variable.(ÁÕ¦a8ñ¾¢–è,
+[squid:S1854">Remove this useless assignment to local variable "hotelCount".(ÁÕ¦a8ñ¾¢–è,
+V
+squid:S106%"9Replace this use of System.out or System.err by a logger.(è‡œÌ8ñ¾¢–è,
+\squid:S2130">Use "Double.parseDouble" for this string-to-double conversion.(š´©ˆ8ñ¾¢–è,
+csquid:S1226"@Introduce a new variable instead of reusing the parameter "day".(çÊ²ùÿÿÿÿ8ü°¿–è,
+Ksquid:S1481"(Remove this unused "day" local variable.(ı­Ÿ„ùÿÿÿÿ8ü°¿–è,
+Zsquid:S1854"7Remove this useless assignment to local variable "day".(çÊ²ùÿÿÿÿ8ü°¿–è,
