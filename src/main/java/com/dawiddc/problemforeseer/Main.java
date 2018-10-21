@@ -1,41 +1,44 @@
 package com.dawiddc.problemforeseer;
 
+import org.apache.commons.math3.util.CombinatoricsUtils;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class Main {
+    private static final int ITERATION_COUNT = 10;
     private static Integer dayCount;
     private static Integer hotelCount;
     private static Integer peopleCount;
     private static double nightSpentAtHotelProbability;
     private static Map<List<Integer>, Integer> pairMeetCount = new HashMap<>();
 
+    private static long suspectedEventsFinalCount = 0;
+    private static long suspectedPairsFinalCount = 0;
+    private static Map<Integer, Long> histogramFinalValueMap = new TreeMap<>();
+    private static long suspectedPeopleFinalCount = 0;
+    private static long startTime = 0;
+
     public static void main(String[] args) {
         checkAndAssignArgs(args);
-        findSuspectedPairs();
-        printPairMeetCount();
-
-        try {
-            System.out.println("Press any key to exit...");
-            System.in.read();
-        } catch (IOException e) {
-            System.exit(0);
+        startTime = System.nanoTime();
+        for (int i = 0; i < ITERATION_COUNT; i++) {
+            pairMeetCount = new HashMap<>();
+            System.out.println("\n******************");
+            System.out.println("ITERATION " + i + 1);
+            findSuspectedPairs();
+            storeAndPrintPairMeetCount();
         }
-        System.exit(0);
+        printFinalStats();
+        exit();
     }
 
     private static void checkAndAssignArgs(String[] args) {
         if (args.length < 4) {
             System.out.println("Not enough args!");
-            try {
-                System.in.read();
-            } catch (IOException e) {
-                System.exit(0);
-            }
-            System.exit(0);
+            exit();
         }
-
         peopleCount = Integer.valueOf(args[0]);
         nightSpentAtHotelProbability = Double.parseDouble(args[1]);
         hotelCount = Integer.valueOf(args[2]);
@@ -45,8 +48,10 @@ public class Main {
     private static void findSuspectedPairs() {
         List<Person> people = createAndFillPeopleList(peopleCount);
         List<List<Person>> dayList = createAndFillDayList(people);
+        Random rand = new Random();
 
         for (List<Person> day : dayList) {
+            day.forEach(person -> person.setHotelId(rand.nextInt(hotelCount)));
             List<List<Person>> peopleAtTheSameHotelList = createAndFillPeopleAtTheSameHotelList(day);
             for (List<Person> peopleAtTheSameHotel : peopleAtTheSameHotelList) {
                 List<List<Integer>> pairs = calculatePairs(peopleAtTheSameHotel);
@@ -67,13 +72,11 @@ public class Main {
 
     private static List<List<Person>> createAndFillDayList(List<Person> people) {
         List<List<Person>> dayList = new ArrayList<>(dayCount);
-        Random r = new Random();
 
         for (int i = 0; i < dayCount; i++) {
             List<Person> dayWithPeopleGoingToHotel = people.stream()
                     .filter(person -> Math.random() < nightSpentAtHotelProbability)
                     .collect(Collectors.toList());
-            dayWithPeopleGoingToHotel.forEach(person -> person.setHotelId(r.nextInt(hotelCount)));
             dayList.add(dayWithPeopleGoingToHotel);
         }
         return dayList;
@@ -120,11 +123,19 @@ public class Main {
         }
     }
 
-    private static void printPairMeetCount() {
-        long suspectedEventsCount = pairMeetCount.values().stream().filter(v -> v > 1).mapToInt(Integer::intValue).sum();
+    private static void storeAndPrintPairMeetCount() {
+        long suspectedEventsCount = 0;
+        List<Integer> suspectedEventsValues = pairMeetCount.values().stream()
+                .filter(v -> v > 1)
+                .collect(Collectors.toList());
+        for (Integer value : suspectedEventsValues) {
+            suspectedEventsCount += CombinatoricsUtils.binomialCoefficientDouble(value, 2);
+        }
+        suspectedEventsFinalCount += suspectedEventsCount / ITERATION_COUNT;
         System.out.println("\nSuspected events count: " + suspectedEventsCount);
 
         long suspectedPairsCount = pairMeetCount.values().stream().filter(v -> v > 1).count();
+        suspectedPairsFinalCount += suspectedPairsCount / ITERATION_COUNT;
         System.out.println("Suspected pair count: " + suspectedPairsCount);
 
         System.out.println("\nHistogram:");
@@ -132,6 +143,11 @@ public class Main {
         for (int i = 1; i <= maxMeetCount; i++) {
             final int meetCount = i;
             long sum = pairMeetCount.values().stream().filter(value -> value == meetCount).count();
+            if (histogramFinalValueMap.containsKey(i)) {
+                histogramFinalValueMap.put(i, histogramFinalValueMap.get(i) + (sum / ITERATION_COUNT));
+            } else {
+                histogramFinalValueMap.put(i, (sum / ITERATION_COUNT));
+            }
             System.out.println(i + "=" + sum);
         }
 
@@ -141,6 +157,32 @@ public class Main {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList())
                 .forEach(suspectedPeople::addAll);
+        suspectedPeopleFinalCount += suspectedPeople.size() / ITERATION_COUNT;
         System.out.println("\nSuspected people count: " + suspectedPeople.size());
+    }
+
+    private static void printFinalStats() {
+        System.out.println("\n******************************************************");
+        System.out.println("Elapsed time: " + (double) (System.nanoTime() - startTime) / 1000000000.0 + " seconds");
+        System.out.println("AVERAGE VALUES:");
+        System.out.println("Suspected events final count: " + suspectedEventsFinalCount);
+        System.out.println("Suspected pair final count: " + suspectedPairsFinalCount);
+        System.out.println("\nHistogram:");
+        int i = 1;
+        for (Long value : histogramFinalValueMap.values()) {
+            System.out.println(i + "=" + value);
+            i++;
+        }
+        System.out.println("\nSuspected people final count: " + suspectedPeopleFinalCount);
+    }
+
+    private static void exit() {
+        try {
+            System.out.println("\nPress any key to exit...");
+            System.in.read();
+        } catch (IOException e) {
+            System.exit(0);
+        }
+        System.exit(0);
     }
 }
